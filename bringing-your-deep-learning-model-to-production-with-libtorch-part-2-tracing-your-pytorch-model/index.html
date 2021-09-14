@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="/assets/inter/inter.css">
+  <link rel="stylesheet" href="/assets/new.min.css">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <title>Garry's Blog - Tracing your PyTorch model</title>
+  <style>
+    code{white-space: normal;}
+    span.smallcaps{font-variant: small-caps;}
+    span.underline{text-decoration: underline;}
+    div.column{display: inline-block; vertical-align: top; width: 50%;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    ul.task-list{list-style: none;}
+    pre > code.sourceCode { white-space: normal; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; white-space: pre; min-width: 100%; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+      }
+    pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+    div.sourceCode
+      { color: #cccccc; background-color: #303030; }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ffcfaf; } /* Alert */
+    code span.an { color: #7f9f7f; font-weight: bold; } /* Annotation */
+    code span.at { } /* Attribute */
+    code span.bn { color: #dca3a3; } /* BaseN */
+    code span.bu { } /* BuiltIn */
+    code span.cf { color: #f0dfaf; } /* ControlFlow */
+    code span.ch { color: #dca3a3; } /* Char */
+    code span.cn { color: #dca3a3; font-weight: bold; } /* Constant */
+    code span.co { color: #7f9f7f; } /* Comment */
+    code span.cv { color: #7f9f7f; font-weight: bold; } /* CommentVar */
+    code span.do { color: #7f9f7f; } /* Documentation */
+    code span.dt { color: #dfdfbf; } /* DataType */
+    code span.dv { color: #dcdccc; } /* DecVal */
+    code span.er { color: #c3bf9f; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #c0bed1; } /* Float */
+    code span.fu { color: #efef8f; } /* Function */
+    code span.im { } /* Import */
+    code span.in { color: #7f9f7f; font-weight: bold; } /* Information */
+    code span.kw { color: #f0dfaf; } /* Keyword */
+    code span.op { color: #f0efd0; } /* Operator */
+    code span.ot { color: #efef8f; } /* Other */
+    code span.pp { color: #ffcfaf; font-weight: bold; } /* Preprocessor */
+    code span.sc { color: #dca3a3; } /* SpecialChar */
+    code span.ss { color: #cc9393; } /* SpecialString */
+    code span.st { color: #cc9393; } /* String */
+    code span.va { } /* Variable */
+    code span.vs { color: #cc9393; } /* VerbatimString */
+    code span.wa { color: #7f9f7f; font-weight: bold; } /* Warning */
+
+    code span.da { color: #7f9f7f; font-weight: bold; } /* Diff add */
+    code span.dr { color: #dca3a3; } /* Diff remove */
+  </style>
+  <style type="text/css">
+    /* fix mobile horizontal scroll */
+    @media only screen and (max-width: 768px) {
+      html,
+      body {
+        overflow-x: hidden;
+      }
+      body {
+        position: relative
+      }
+    }
+    /* fix mobile font size safari */
+    @media screen and (max-device-width: 720px){
+      body{
+        -webkit-text-size-adjust: none;
+      }
+    }
+    /* extensions */
+    sub {
+      color: #ccc;
+    }
+    ul.large li {
+      margin-bottom: 2rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <a href="/" style="color: white; text-decoration: none;">
+      <h1>Garry's Blog</h1>
+    </a>
+    <sub style="line-height: 0.8;">
+      About machine learning, debugging, Python, C++ and other interesting stuff.<br/>
+      Carefully documenting everything I screwed up for future generations.
+    </sub>
+  </header>
+  <h1 id="bringing-your-deep-learning-model-to-production-with-libtorch---tracing-your-pytorch-model-part-2-of-3">Tracing your PyTorch model</h1>
+<sub>Part 2 of 3 - Bringing your Deep Learning Model to Production with libtorch</sub>
+<br/><br/>
+<p><em>This is part 2 of a 3-part series on <code>libtorch</code>. <a href="/bringing-your-deep-learning-model-to-production-with-libtorch-part-1-why-libtorch" target="_blank">Part 1</a> covers the rationale for PyTorch and using <code>libtorch</code> in production. This part covers the basics of getting your model up-and-running in <code>libtorch</code>. <a href="/bringing-your-deep-learning-model-to-production-with-libtorch-part-3-advanced-libtorch" target="_blank">Part 3</a> discusses some more advanced topics.</em></p>
+<h4 id="porting-your-pytorch-model-to-torch-script-with-the-jit">Porting your PyTorch Model to Torch Script with the JIT</h4>
+<p>Before we start converting our model to something we can use with <code>libtorch</code>, we need to talk about the JIT and TorchScript a little bit. Torch Script is an intermediate format used to store your models so that they are portable between PyTorch and <code>libtorch</code>. A JIT (Just-In-Time compiler) is included to allow for exporting and importing Torch Script files.</p>
+<p><a href="https://discuss.pytorch.org/t/when-should-i-use-tracing-rather-than-scripting/53883" target="_blank">There are two ways</a> to convert your PyTorch model to a Torch Script one:</p>
+<ol type="1">
+<li>Tracing. The JIT traces your model over one inference iteration to extract the model.</li>
+<li>Scripting. The JIT parsers your Python code and converts it to Torch Script directly.</li>
+</ol>
+<p>Tracing requires no changes to your Python code, but it doesn’t deal well with complicated models - for example: if you have a model of which the behavior might change depending on some internal logic in-between inference runs, this is not picked up by a single trace.</p>
+<p>Scripting always produces a correct Torch Script model, if it works. It often requires some changes to the Python code because the compiler is quite picky. I’ll quickly go through the most basic example (you can find more on those in the <code>libtorch</code> docs) and move onto the more complicated stuff after that.</p>
+<p>Converting a sine estimation model to Torch Script (taken from the PyTorch repo examples):</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1"></a><span class="im">import</span> torch</span>
+<span id="cb1-2"><a href="#cb1-2"></a><span class="im">from</span> torch <span class="im">import</span> nn</span>
+<span id="cb1-3"><a href="#cb1-3"></a></span>
+<span id="cb1-4"><a href="#cb1-4"></a><span class="co">&quot;&quot;&quot;</span></span>
+<span id="cb1-5"><a href="#cb1-5"></a><span class="co"> class Sequence;</span></span>
+<span id="cb1-6"><a href="#cb1-6"></a></span>
+<span id="cb1-7"><a href="#cb1-7"></a><span class="co"> Model capable of doing sine wave prediction. We don&#39;t care about the model itself for now,</span></span>
+<span id="cb1-8"><a href="#cb1-8"></a><span class="co"> just assume it works!</span></span>
+<span id="cb1-9"><a href="#cb1-9"></a><span class="co"> </span></span>
+<span id="cb1-10"><a href="#cb1-10"></a><span class="co"> Source:</span></span>
+<span id="cb1-11"><a href="#cb1-11"></a><span class="co">    https://github.com/pytorch/examples/blob/master/time_sequence_prediction/train.py</span></span>
+<span id="cb1-12"><a href="#cb1-12"></a></span>
+<span id="cb1-13"><a href="#cb1-13"></a><span class="co">&quot;&quot;&quot;</span></span>
+<span id="cb1-14"><a href="#cb1-14"></a><span class="kw">class</span> Sequence(nn.Module):</span>
+<span id="cb1-15"><a href="#cb1-15"></a></span>
+<span id="cb1-16"><a href="#cb1-16"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>):</span>
+<span id="cb1-17"><a href="#cb1-17"></a>        <span class="bu">super</span>(Sequence, <span class="va">self</span>).<span class="fu">__init__</span>()</span>
+<span id="cb1-18"><a href="#cb1-18"></a>        <span class="va">self</span>.lstm1 <span class="op">=</span> nn.LSTMCell(<span class="dv">1</span>, <span class="dv">51</span>)</span>
+<span id="cb1-19"><a href="#cb1-19"></a>        <span class="va">self</span>.lstm2 <span class="op">=</span> nn.LSTMCell(<span class="dv">51</span>, <span class="dv">51</span>)</span>
+<span id="cb1-20"><a href="#cb1-20"></a>        <span class="va">self</span>.linear <span class="op">=</span> nn.Linear(<span class="dv">51</span>, <span class="dv">1</span>)</span>
+<span id="cb1-21"><a href="#cb1-21"></a></span>
+<span id="cb1-22"><a href="#cb1-22"></a>    <span class="kw">def</span> forward(<span class="va">self</span>, <span class="bu">input</span>, future<span class="op">=</span><span class="dv">0</span>):</span>
+<span id="cb1-23"><a href="#cb1-23"></a>        outputs <span class="op">=</span> []</span>
+<span id="cb1-24"><a href="#cb1-24"></a></span>
+<span id="cb1-25"><a href="#cb1-25"></a>        <span class="co"># (I changed `torch.double` to `torch.float` here because otherwise</span></span>
+<span id="cb1-26"><a href="#cb1-26"></a>        <span class="co">#  the LSTM layer will complain!)</span></span>
+<span id="cb1-27"><a href="#cb1-27"></a>        h_t <span class="op">=</span> torch.zeros(<span class="bu">input</span>.size(<span class="dv">0</span>), <span class="dv">51</span>, dtype<span class="op">=</span>torch.<span class="bu">float</span>)</span>
+<span id="cb1-28"><a href="#cb1-28"></a>        c_t <span class="op">=</span> torch.zeros(<span class="bu">input</span>.size(<span class="dv">0</span>), <span class="dv">51</span>, dtype<span class="op">=</span>torch.<span class="bu">float</span>)</span>
+<span id="cb1-29"><a href="#cb1-29"></a>        h_t2 <span class="op">=</span> torch.zeros(<span class="bu">input</span>.size(<span class="dv">0</span>), <span class="dv">51</span>, dtype<span class="op">=</span>torch.<span class="bu">float</span>)</span>
+<span id="cb1-30"><a href="#cb1-30"></a>        c_t2 <span class="op">=</span> torch.zeros(<span class="bu">input</span>.size(<span class="dv">0</span>), <span class="dv">51</span>, dtype<span class="op">=</span>torch.<span class="bu">float</span>)</span>
+<span id="cb1-31"><a href="#cb1-31"></a></span>
+<span id="cb1-32"><a href="#cb1-32"></a>        <span class="cf">for</span> i, input_t <span class="kw">in</span> <span class="bu">enumerate</span>(<span class="bu">input</span>.chunk(<span class="bu">input</span>.size(<span class="dv">1</span>), dim<span class="op">=</span><span class="dv">1</span>)):</span>
+<span id="cb1-33"><a href="#cb1-33"></a>            h_t, c_t <span class="op">=</span> <span class="va">self</span>.lstm1(input_t, (h_t, c_t))</span>
+<span id="cb1-34"><a href="#cb1-34"></a>            h_t2, c_t2 <span class="op">=</span> <span class="va">self</span>.lstm2(h_t, (h_t2, c_t2))</span>
+<span id="cb1-35"><a href="#cb1-35"></a>            output <span class="op">=</span> <span class="va">self</span>.linear(h_t2)</span>
+<span id="cb1-36"><a href="#cb1-36"></a>            outputs <span class="op">+=</span> [output]</span>
+<span id="cb1-37"><a href="#cb1-37"></a></span>
+<span id="cb1-38"><a href="#cb1-38"></a>        <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(future):</span>
+<span id="cb1-39"><a href="#cb1-39"></a>            h_t, c_t <span class="op">=</span> <span class="va">self</span>.lstm1(output, (h_t, c_t))</span>
+<span id="cb1-40"><a href="#cb1-40"></a>            h_t2, c_t2 <span class="op">=</span> <span class="va">self</span>.lstm2(h_t, (h_t2, c_t2))</span>
+<span id="cb1-41"><a href="#cb1-41"></a>            output <span class="op">=</span> <span class="va">self</span>.linear(h_t2)</span>
+<span id="cb1-42"><a href="#cb1-42"></a>            outputs <span class="op">+=</span> [output]</span>
+<span id="cb1-43"><a href="#cb1-43"></a></span>
+<span id="cb1-44"><a href="#cb1-44"></a>        outputs <span class="op">=</span> torch.stack(outputs, <span class="dv">1</span>).squeeze(<span class="dv">2</span>)</span>
+<span id="cb1-45"><a href="#cb1-45"></a></span>
+<span id="cb1-46"><a href="#cb1-46"></a>        <span class="cf">return</span> outputs</span>
+<span id="cb1-47"><a href="#cb1-47"></a></span>
+<span id="cb1-48"><a href="#cb1-48"></a>model <span class="op">=</span> Sequence()</span>
+<span id="cb1-49"><a href="#cb1-49"></a></span>
+<span id="cb1-50"><a href="#cb1-50"></a><span class="cf">with</span> torch.no_grad():</span>
+<span id="cb1-51"><a href="#cb1-51"></a>    <span class="co"># Generate a bunch of fake data to feed the model when we `torch.jit.script` it</span></span>
+<span id="cb1-52"><a href="#cb1-52"></a>    <span class="co"># since it is needed by the JIT (not sure why?).</span></span>
+<span id="cb1-53"><a href="#cb1-53"></a>    fake_input <span class="op">=</span> torch.zeros((<span class="dv">10</span>, <span class="dv">100</span>))</span>
+<span id="cb1-54"><a href="#cb1-54"></a></span>
+<span id="cb1-55"><a href="#cb1-55"></a>    <span class="co"># Trace the model using `torch.jit.script`</span></span>
+<span id="cb1-56"><a href="#cb1-56"></a>    traced <span class="op">=</span> torch.jit.script(model, fake_input)</span>
+<span id="cb1-57"><a href="#cb1-57"></a></span>
+<span id="cb1-58"><a href="#cb1-58"></a>    <span class="co"># Print the Torch Script code</span></span>
+<span id="cb1-59"><a href="#cb1-59"></a>    <span class="bu">print</span>(traced.code)</span>
+<span id="cb1-60"><a href="#cb1-60"></a></span>
+<span id="cb1-61"><a href="#cb1-61"></a>    <span class="co"># We can also store the model like usual:</span></span>
+<span id="cb1-62"><a href="#cb1-62"></a>    traced.save(<span class="st">&#39;traced.ptc&#39;</span>)</span></code></pre></div>
+<p>That last part is important, we use <code>torch.jit.script</code> to script the model. Even this relatively simple model <em>cannot</em> be converted in its current form. Now, what happens if the JIT cannot compile a model is one of those things that’s not very clear from the docs. Fortunately, the error messages are quite helpful. Anyway, I wanted to run through it anyway because that’s how we learn.</p>
+<p>Here’s the first error:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1"></a><span class="pp">RuntimeError</span>: </span>
+<span id="cb2-2"><a href="#cb2-2"></a><span class="bu">all</span> inputs of <span class="bu">range</span> must be ints, found Tensor <span class="kw">in</span> argument <span class="dv">0</span>:</span>
+<span id="cb2-3"><a href="#cb2-3"></a>  File <span class="st">&quot;sine.py&quot;</span>, line <span class="dv">26</span></span>
+<span id="cb2-4"><a href="#cb2-4"></a>            outputs <span class="op">+=</span> [output]</span>
+<span id="cb2-5"><a href="#cb2-5"></a></span>
+<span id="cb2-6"><a href="#cb2-6"></a>        <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(future):</span>
+<span id="cb2-7"><a href="#cb2-7"></a>                 <span class="op">~~~~~~~~~~~~</span> <span class="op">&lt;---</span> HERE</span>
+<span id="cb2-8"><a href="#cb2-8"></a>            h_t, c_t <span class="op">=</span> <span class="va">self</span>.lstm1(output, (h_t, c_t))</span>
+<span id="cb2-9"><a href="#cb2-9"></a>            h_t2, c_t2 <span class="op">=</span> <span class="va">self</span>.lstm2(h_t, (h_t2, c_t2))</span></code></pre></div>
+<p>So, the <code>range</code> function obviously needs an integer. When executing the model without the JIT, it receives an integer for the <code>future</code> parameter through the <code>forward</code> function and everything is fine. Now, with the JIT, suddenly it’s a Tensor? This is actually not some kind of weird bug: In a traced Torch Script model, all inputs must be Tensors, even inputs that are supposed to be integers (we can just have a Tensor with shape <code>(1,)</code>). In this case, the JIT blindly assumes that (even though the <code>future</code> parameter has a default value 0) it is a Tensor and suddenly the range function does not work anymore.</p>
+<p>We’ll just make the conversion explicit and that gets rid of the error:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode diff"><code class="sourceCode diff"><span id="cb3-1"><a href="#cb3-1"></a><span class="dr">- for i in range(future):</span></span>
+<span id="cb3-2"><a href="#cb3-2"></a><span class="da">+ for i in range(int(future)):</span></span></code></pre></div>
+<p>Next error:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1"></a><span class="pp">RuntimeError</span>: </span>
+<span id="cb4-2"><a href="#cb4-2"></a>undefined value output:  </span>
+<span id="cb4-3"><a href="#cb4-3"></a>  File <span class="st">&quot;sine.py&quot;</span>, line <span class="dv">37</span></span>
+<span id="cb4-4"><a href="#cb4-4"></a></span>
+<span id="cb4-5"><a href="#cb4-5"></a>        <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="bu">int</span>(future)):</span>
+<span id="cb4-6"><a href="#cb4-6"></a>            h_t, c_t <span class="op">=</span> <span class="va">self</span>.lstm1(output, (h_t, c_t))</span>
+<span id="cb4-7"><a href="#cb4-7"></a>                                  <span class="op">~~~~~~</span> <span class="op">&lt;---</span> HERE</span>
+<span id="cb4-8"><a href="#cb4-8"></a>            h_t2, c_t2 <span class="op">=</span> <span class="va">self</span>.lstm2(h_t, (h_t2, c_t2))</span>
+<span id="cb4-9"><a href="#cb4-9"></a>            output <span class="op">=</span> <span class="va">self</span>.linear(h_t2)</span></code></pre></div>
+<p>This piece of code makes use of the <code>output</code> variable declared inside the previous loop, which is valid in Python (not very nice though) but not in Torch Script, we can predefine the variable as a tensor earlier:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode diff"><code class="sourceCode diff"><span id="cb5-1"><a href="#cb5-1"></a>h_t = torch.zeros(input.size(0), 51, dtype=torch.double)</span>
+<span id="cb5-2"><a href="#cb5-2"></a>c_t = torch.zeros(input.size(0), 51, dtype=torch.double)</span>
+<span id="cb5-3"><a href="#cb5-3"></a>h_t2 = torch.zeros(input.size(0), 51, dtype=torch.double)</span>
+<span id="cb5-4"><a href="#cb5-4"></a>c_t2 = torch.zeros(input.size(0), 51, dtype=torch.double)</span>
+<span id="cb5-5"><a href="#cb5-5"></a><span class="da">+ output = torch.zeros((1, 1))</span></span></code></pre></div>
+<p>Finally:</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1"></a><span class="pp">RuntimeError</span>: </span>
+<span id="cb6-2"><a href="#cb6-2"></a>Expected a default value of <span class="bu">type</span> Tensor on parameter <span class="st">&quot;future&quot;</span>:</span>
+<span id="cb6-3"><a href="#cb6-3"></a>  File <span class="st">&quot;sine.py&quot;</span>, line <span class="dv">22</span></span>
+<span id="cb6-4"><a href="#cb6-4"></a>    <span class="kw">def</span> forward(<span class="va">self</span>, <span class="bu">input</span>, future<span class="op">=</span><span class="dv">0</span>):</span>
+<span id="cb6-5"><a href="#cb6-5"></a>    <span class="op">~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~</span>...  <span class="op">&lt;---</span> HERE</span>
+<span id="cb6-6"><a href="#cb6-6"></a>        outputs <span class="op">=</span> []</span></code></pre></div>
+<p>Yes, we mentioned this earlier. It should be a Tensor. Instead of making the default value a tensor we simply remove the default value because we’ll always want to predict the future in inference mode.</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode diff"><code class="sourceCode diff">
+<span id="cb7-1"><a href="#cb7-1"></a><span class="dr">-def forward(self, input, future = 0):</span></span>
+<span id="cb7-2"><a href="#cb7-2"></a><span class="da">+def forward(self, input, future):</span></span>
+</code></pre></div>
+<p>A quick note about that: Most people that are looking to convert their model to Torch Script will be doing this for the sake of inference optimization. You can do training in C++ as well, but in most commercial settings inference optimization is more important than training optimization (the latter can be solved by throwing more money at the problem anyway). Because of this, you can often remove large parts of your model that are only relevant for the training phase. However, this causes your model code to branch out which adds maintenance overhead. You can use something like the <a href="https://en.wikipedia.org/wiki/Strategy_pattern" target="_blank">Strategy pattern</a> to cope with this architecturally.</p>
+<p>Even with a simple model (just three LSTM modules), we have already had to change quite a bit. You will notice that the work required to make your model JIT-proof grows linearly with the number of lines your model comprises. For large models it can be quite a lot of work, but it is doable.</p>
+<p>The code will print a traced version of the model in Torch Script that looks a lot like Python code. You can see some of the statements have been made more explicit, some have been rewritten or split out and all the variable names have been mangled.</p>
+<p>The TorchScript model was saved as <code>traced.ptc</code>. There’s some <a href="https://github.com/pytorch/pytorch/issues/14864" target="_blank">discussion</a> about which extension to use for Torch Script models. <code>.pt</code> is recommended for “normal” PyTorch models, but it’s unclear what to use for compiled models. I like <code>.ptc</code> so I used it consistently here.</p>
+<h4 id="get-up-and-running-with-libtorch">Get up-and-running with libtorch</h4>
+<p>Just a heads up: I’ll be using C++17 for the remainder of this post. It is not a requirement though, just replace C++17 features with their older (and more verbose) counterpart version.</p>
+<p>First, we need to install <code>libtorch</code>. It comes prepackaged as a zip file, you can download it on <a href="https://pytorch.org/get-started/locally/" target="_blank">the PyTorch website</a>. You need to select <code>LibTorch</code> and <code>C++/Java</code> to get the correct one.</p>
+<p><a href="https://download.pytorch.org/libtorch/cpu/libtorch-macos-1.5.0.zip" target="_blank">Here’s a quick link to <code>libtorch</code> version 1.5 for macOS (no CUDA support).</a></p>
+<p>Let’s install it to <code>/usr/local</code> so it gets picked up by <code>CMake</code>. Here’s a script you can use for that:</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1"></a><span class="bu">cd</span> /tmp</span>
+<span id="cb8-2"><a href="#cb8-2"></a><span class="bu">echo</span> <span class="st">&quot;Downloading libtorch 1.5...&quot;</span></span>
+<span id="cb8-3"><a href="#cb8-3"></a><span class="fu">wget</span> https://download.pytorch.org/libtorch/cpu/libtorch-macos-1.5.0.zip <span class="kw">&amp;&amp;</span> <span class="kw">\</span></span>
+<span id="cb8-4"><a href="#cb8-4"></a><span class="fu">unzip</span> libtorch-macos-1.5.0.zip <span class="kw">&amp;&amp;</span> <span class="kw">\</span></span>
+<span id="cb8-5"><a href="#cb8-5"></a><span class="bu">cd</span> libtorch/</span>
+<span id="cb8-6"><a href="#cb8-6"></a><span class="bu">echo</span> <span class="st">&quot;Installing libtorch...&quot;</span></span>
+<span id="cb8-7"><a href="#cb8-7"></a><span class="fu">sudo</span> mv include/* /usr/local/include/ <span class="kw">&amp;&amp;</span> <span class="kw">\</span></span>
+<span id="cb8-8"><a href="#cb8-8"></a><span class="fu">sudo</span> mv lib/* /usr/local/lib/ <span class="kw">&amp;&amp;</span> <span class="kw">\</span></span>
+<span id="cb8-9"><a href="#cb8-9"></a><span class="fu">sudo</span> mv share/* /usr/local/share/</span></code></pre></div>
+<p>This will work on Linux and macOS (it will not work on Windows). You can replace the download link with your respective version.</p>
+<p>We create a minimum working <code>CMakeLists.txt</code> like this:</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode cmake"><code class="sourceCode cmake"><span id="cb9-1"><a href="#cb9-1"></a><span class="kw">cmake_minimum_required</span>(<span class="ot">VERSION</span> 3.10)</span>
+<span id="cb9-2"><a href="#cb9-2"></a></span>
+<span id="cb9-3"><a href="#cb9-3"></a><span class="kw">project</span>(tutorial-libtorch <span class="ot">VERSION</span> 1.0.0)</span>
+<span id="cb9-4"><a href="#cb9-4"></a></span>
+<span id="cb9-5"><a href="#cb9-5"></a><span class="co"># This sets the C++ version to C++17</span></span>
+<span id="cb9-6"><a href="#cb9-6"></a><span class="kw">set</span>(<span class="dv">CMAKE_CXX_STANDARD</span> 17)</span>
+<span id="cb9-7"><a href="#cb9-7"></a><span class="kw">set</span>(<span class="dv">CMAKE_CXX_STANDARD_REQUIRED</span> ON)</span>
+<span id="cb9-8"><a href="#cb9-8"></a></span>
+<span id="cb9-9"><a href="#cb9-9"></a><span class="co"># Import Torch C++ (this looks for the cmake-files is</span></span>
+<span id="cb9-10"><a href="#cb9-10"></a><span class="co"># a number of paths including `/usr/local/share/cmake`</span></span>
+<span id="cb9-11"><a href="#cb9-11"></a><span class="co"># where we installed it)</span></span>
+<span id="cb9-12"><a href="#cb9-12"></a><span class="kw">find_package</span>(Torch <span class="ot">REQUIRED</span>)</span>
+<span id="cb9-13"><a href="#cb9-13"></a></span>
+<span id="cb9-14"><a href="#cb9-14"></a><span class="co"># Make target</span></span>
+<span id="cb9-15"><a href="#cb9-15"></a><span class="kw">add_executable</span>(tutorial-libtorch main.cpp)</span>
+<span id="cb9-16"><a href="#cb9-16"></a></span>
+<span id="cb9-17"><a href="#cb9-17"></a><span class="co"># Link Torch C++ libs</span></span>
+<span id="cb9-18"><a href="#cb9-18"></a><span class="kw">target_link_libraries</span>(tutorial-libtorch <span class="st">&quot;</span><span class="dv">${TORCH_LIBRARIES}</span><span class="st">&quot;</span>)</span></code></pre></div>
+<p>Since <code>/usr/local</code> is in CMake’s search path, this should pick up <code>libtorch</code> automatically!</p>
+<p>Let’s use a basic example I took from the PyTorch website to test whether our build setup works.</p>
+<p><code>main.cpp</code></p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode cpp"><code class="sourceCode cpp"><span id="cb10-1"><a href="#cb10-1"></a><span class="pp">#include </span><span class="im">&lt;iostream&gt;</span></span>
+<span id="cb10-2"><a href="#cb10-2"></a></span>
+<span id="cb10-3"><a href="#cb10-3"></a><span class="pp">#include </span><span class="im">&lt;torch/torch.h&gt;</span></span>
+<span id="cb10-4"><a href="#cb10-4"></a></span>
+<span id="cb10-5"><a href="#cb10-5"></a><span class="dt">int</span> main() {</span>
+<span id="cb10-6"><a href="#cb10-6"></a>  torch::Tensor tensor = torch::eye(<span class="dv">3</span>);</span>
+<span id="cb10-7"><a href="#cb10-7"></a>  <span class="bu">std::</span>cout &lt;&lt; tensor &lt;&lt; <span class="bu">std::</span>endl;</span>
+<span id="cb10-8"><a href="#cb10-8"></a>}</span></code></pre></div>
+<p>Using CMake, (out of source) compiling is quite easy.</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb11-1"><a href="#cb11-1"></a><span class="fu">mkdir</span> -p build <span class="kw">&amp;&amp;</span> <span class="kw">\</span></span>
+<span id="cb11-2"><a href="#cb11-2"></a><span class="bu">cd</span> build <span class="kw">&amp;&amp;</span> <span class="kw">\</span></span>
+<span id="cb11-3"><a href="#cb11-3"></a><span class="fu">cmake</span> .. <span class="kw">&amp;&amp;</span> <span class="kw">\</span></span>
+<span id="cb11-4"><a href="#cb11-4"></a><span class="fu">make</span> <span class="kw">&amp;&amp;</span> <span class="kw">\</span></span>
+<span id="cb11-5"><a href="#cb11-5"></a><span class="bu">echo</span> <span class="st">&quot;\nRunning the program...\n&quot;</span> <span class="kw">&amp;&amp;</span> <span class="kw">\</span></span>
+<span id="cb11-6"><a href="#cb11-6"></a><span class="ex">./tutorial-libtorch</span> <span class="kw">&amp;&amp;</span> <span class="kw">\</span></span>
+<span id="cb11-7"><a href="#cb11-7"></a><span class="bu">cd</span> ..</span></code></pre></div>
+<p>There you go! If everything went well, you should see:</p>
+<div class="sourceCode">
+<pre class="sourceCode"><code class="sourceCode">
+<span> 1  0  0</span>
+<span> 0  1  0</span>
+<span> 0  0  1</span>
+<span>[ CPUFloatType{3,3} ]</span></code></pre>
+</div>
+<p>If you are not familiar with CMake and the likes, I recommend reading up on the basics. Either way, your project structure (at this point) should look something like this:</p>
+<div class="sourceCode">
+<pre class="sourceCode"><code class="sourceCode"><span>`- tutorial</span>
+<span>    `- CMakeLists.txt</span>
+<span>`- main.cpp</span>
+<span>`- build</span>
+<span>`- tutorial-libtorch (where the built binary will live)</span>
+<span>`- ... (more CMake files and folders)</span>
+</code></pre>
+</div>
+<h4 id="loading-and-running-our-model">Loading and running our model</h4>
+<p>The <code>libtorch</code> API is designed such that it almost feels like you’re coding in Python (you are not). We can load and run the model like so:</p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode cpp"><code class="sourceCode cpp"><span id="cb14-1"><a href="#cb14-1"></a><span class="pp">#include </span><span class="im">&lt;iostream&gt;</span></span>
+<span id="cb14-2"><a href="#cb14-2"></a></span>
+<span id="cb14-3"><a href="#cb14-3"></a><span class="pp">#include </span><span class="im">&lt;torch/script.h&gt;</span></span>
+<span id="cb14-4"><a href="#cb14-4"></a></span>
+<span id="cb14-5"><a href="#cb14-5"></a><span class="dt">int</span> main(<span class="dt">int</span> argc, <span class="dt">char</span>** argv) {</span>
+<span id="cb14-6"><a href="#cb14-6"></a>  <span class="cf">if</span> (argc &lt; <span class="dv">2</span>) {</span>
+<span id="cb14-7"><a href="#cb14-7"></a>    <span class="bu">std::</span>cerr &lt;&lt; <span class="st">&quot;Please provide model name.&quot;</span> &lt;&lt; <span class="bu">std::</span>endl;</span>
+<span id="cb14-8"><a href="#cb14-8"></a>    <span class="cf">return</span> <span class="dv">1</span>;</span>
+<span id="cb14-9"><a href="#cb14-9"></a>  }</span>
+<span id="cb14-10"><a href="#cb14-10"></a></span>
+<span id="cb14-11"><a href="#cb14-11"></a>  torch::jit::script::Module model;</span>
+<span id="cb14-12"><a href="#cb14-12"></a></span>
+<span id="cb14-13"><a href="#cb14-13"></a>  <span class="cf">try</span> {</span>
+<span id="cb14-14"><a href="#cb14-14"></a>    model = torch::jit::load(<span class="bu">std::</span>string(argv[<span class="dv">1</span>]));</span>
+<span id="cb14-15"><a href="#cb14-15"></a></span>
+<span id="cb14-16"><a href="#cb14-16"></a>    <span class="co">// Explicitly load model onto CPU, you can use kGPU if you are on Linux</span></span>
+<span id="cb14-17"><a href="#cb14-17"></a>    <span class="co">// and have libtorch version with CUDA support (and a GPU)</span></span>
+<span id="cb14-18"><a href="#cb14-18"></a>    model.to(torch::kCPU);</span>
+<span id="cb14-19"><a href="#cb14-19"></a></span>
+<span id="cb14-20"><a href="#cb14-20"></a>    <span class="co">// Set to `eval` model (just like Python)</span></span>
+<span id="cb14-21"><a href="#cb14-21"></a>    model.eval();</span>
+<span id="cb14-22"><a href="#cb14-22"></a></span>
+<span id="cb14-23"><a href="#cb14-23"></a>    <span class="co">// Within this scope/thread, don&#39;t use gradients (again, like in Python)</span></span>
+<span id="cb14-24"><a href="#cb14-24"></a>    torch::NoGradGuard <span class="va">no_grad_</span>;</span>
+<span id="cb14-25"><a href="#cb14-25"></a></span>
+<span id="cb14-26"><a href="#cb14-26"></a>    <span class="co">// Input to the model is a vector of &quot;IValues&quot; (tensors)</span></span>
+<span id="cb14-27"><a href="#cb14-27"></a>    <span class="bu">std::</span>vector&lt;torch::jit::IValue&gt; input = {</span>
+<span id="cb14-28"><a href="#cb14-28"></a>      <span class="co">// Corresponds to `input`</span></span>
+<span id="cb14-29"><a href="#cb14-29"></a>      torch::zeros({ <span class="dv">1</span>, <span class="dv">20</span> }, torch::dtype(torch::kFloat)),</span>
+<span id="cb14-30"><a href="#cb14-30"></a>      <span class="co">// Corresponds to the `future` parameter</span></span>
+<span id="cb14-31"><a href="#cb14-31"></a>      torch::full({ <span class="dv">1</span> }, <span class="dv">10</span>, torch::dtype(torch::kInt))</span>
+<span id="cb14-32"><a href="#cb14-32"></a>    };</span>
+<span id="cb14-33"><a href="#cb14-33"></a></span>
+<span id="cb14-34"><a href="#cb14-34"></a>    <span class="co">// `model.forward` does what you think it does; it returns an IValue</span></span>
+<span id="cb14-35"><a href="#cb14-35"></a>    <span class="co">// which we convert back to a Tensor</span></span>
+<span id="cb14-36"><a href="#cb14-36"></a>    <span class="kw">auto</span> output = model</span>
+<span id="cb14-37"><a href="#cb14-37"></a>      .forward(input)</span>
+<span id="cb14-38"><a href="#cb14-38"></a>      .toTensor();</span>
+<span id="cb14-39"><a href="#cb14-39"></a></span>
+<span id="cb14-40"><a href="#cb14-40"></a>    <span class="co">// Extract size of output (of the first and only batch) and preallocate</span></span>
+<span id="cb14-41"><a href="#cb14-41"></a>    <span class="co">// a vector with that size</span></span>
+<span id="cb14-42"><a href="#cb14-42"></a>    <span class="kw">auto</span> output_size = output.sizes()[<span class="dv">1</span>];</span>
+<span id="cb14-43"><a href="#cb14-43"></a>    <span class="kw">auto</span> output_vector = <span class="bu">std::</span>vector&lt;<span class="dt">float</span>&gt;(output_size);</span>
+<span id="cb14-44"><a href="#cb14-44"></a></span>
+<span id="cb14-45"><a href="#cb14-45"></a>    <span class="co">// Fill result vector with tensor items using `Tensor::item`</span></span>
+<span id="cb14-46"><a href="#cb14-46"></a>    <span class="cf">for</span> (<span class="dt">int</span> i = <span class="dv">0</span>; i &lt; output_size; i++) {</span>
+<span id="cb14-47"><a href="#cb14-47"></a>      output_vector[i] = output[<span class="dv">0</span>][i].item&lt;<span class="dt">float</span>&gt;();</span>
+<span id="cb14-48"><a href="#cb14-48"></a>    }</span>
+<span id="cb14-49"><a href="#cb14-49"></a></span>
+<span id="cb14-50"><a href="#cb14-50"></a>    <span class="co">// Print the vector here</span></span>
+<span id="cb14-51"><a href="#cb14-51"></a>    <span class="cf">for</span> (<span class="dt">float</span> x : output_vector)</span>
+<span id="cb14-52"><a href="#cb14-52"></a>      <span class="bu">std::</span>cout &lt;&lt; x &lt;&lt; <span class="st">&quot;, &quot;</span>;</span>
+<span id="cb14-53"><a href="#cb14-53"></a>    <span class="bu">std::</span>cout &lt;&lt; <span class="bu">std::</span>endl;</span>
+<span id="cb14-54"><a href="#cb14-54"></a>  }</span>
+<span id="cb14-55"><a href="#cb14-55"></a>  <span class="cf">catch</span> (<span class="at">const</span> c10::Error&amp; e) {</span>
+<span id="cb14-56"><a href="#cb14-56"></a>    <span class="bu">std::</span>cerr &lt;&lt; <span class="st">&quot;An error ocurred: &quot;</span> &lt;&lt; e.what() &lt;&lt; <span class="bu">std::</span>endl;</span>
+<span id="cb14-57"><a href="#cb14-57"></a>    <span class="cf">return</span> <span class="dv">1</span>;</span>
+<span id="cb14-58"><a href="#cb14-58"></a>  }</span>
+<span id="cb14-59"><a href="#cb14-59"></a></span>
+<span id="cb14-60"><a href="#cb14-60"></a>  <span class="cf">return</span> <span class="dv">0</span>;</span>
+<span id="cb14-61"><a href="#cb14-61"></a>}</span></code></pre></div>
+<p>If you run this code, you should see some meaningless output (we haven’t trained the model so nothing to see there). Most of the code is self-explanatory, but there are a few bits I want to highlight.</p>
+<p>First, you will notice that we copy the model to the CPU explicitly here. I found that doing that consistently (to CPU or GPU, whatever you are using) can prevent some errors later on. This is already the case in Python PyTorch, but even more so in <code>libtorch</code> because issues can arise if you trace the model on CPU but try to load it onto a GPU or vice-versa. Just remember that traced models are tied to the device they were originally traced on (this is not always the case, but for more complicated models is usually is).</p>
+<div class="sourceCode" id="cb15"><pre class="sourceCode cpp"><code class="sourceCode cpp"><span id="cb15-1"><a href="#cb15-1"></a>model.to(torch::kCPU);</span></code></pre></div>
+<p>We use a guard where we would use a <code>with</code>-block in Python. The guard ends when the object goes out of scope.</p>
+<div class="sourceCode" id="cb16"><pre class="sourceCode cpp"><code class="sourceCode cpp"><span id="cb16-1"><a href="#cb16-1"></a><span class="co">// Within this scope/thread, don&#39;t use gradients (again, like in Python)</span></span>
+<span id="cb16-2"><a href="#cb16-2"></a>torch::NoGradGuard <span class="va">no_grad_</span>;</span></code></pre></div>
+<p>There are a number of ways to initialize tensors. We use the <code>TensorOptions</code> in the constructor of the <code>torch::zeros</code> and <code>torch::full</code> factory methods.</p>
+<div class="sourceCode" id="cb17"><pre class="sourceCode cpp"><code class="sourceCode cpp"><span id="cb17-1"><a href="#cb17-1"></a><span class="co">// Input to the model is a vector of &quot;IValues&quot; (tensors)</span></span>
+<span id="cb17-2"><a href="#cb17-2"></a><span class="bu">std::</span>vector&lt;torch::jit::IValue&gt; input = {</span>
+<span id="cb17-3"><a href="#cb17-3"></a>  <span class="co">// Corresponds to `input`</span></span>
+<span id="cb17-4"><a href="#cb17-4"></a>  torch::zeros({ <span class="dv">1</span>, <span class="dv">20</span> }, torch::dtype(torch::kFloat)),</span>
+<span id="cb17-5"><a href="#cb17-5"></a>  <span class="co">// Corresponds to the `future` parameter</span></span>
+<span id="cb17-6"><a href="#cb17-6"></a>  torch::full({ <span class="dv">1</span> }, <span class="dv">10</span>, torch::dtype(torch::kInt))</span>
+<span id="cb17-7"><a href="#cb17-7"></a>};</span></code></pre></div>
+<p>Likewise, you could do it like this:</p>
+<div class="sourceCode" id="cb18"><pre class="sourceCode cpp"><code class="sourceCode cpp"><span id="cb18-1"><a href="#cb18-1"></a>torch::zeros({ <span class="dv">1</span>, <span class="dv">20</span> }).to(torch::kFloat);</span>
+<span id="cb18-2"><a href="#cb18-2"></a>torch::full({ <span class="dv">1</span> }, <span class="dv">10</span>).to(torch::kInt);</span>
+<span id="cb18-3"><a href="#cb18-3"></a></span>
+<span id="cb18-4"><a href="#cb18-4"></a><span class="co">// If you want to make the device explicit as well:</span></span>
+<span id="cb18-5"><a href="#cb18-5"></a>torch::zeros({ <span class="dv">1</span>, <span class="dv">20</span> }).to(torch::kFloat).to(torch::kCPU);</span>
+<span id="cb18-6"><a href="#cb18-6"></a>torch::full({ <span class="dv">1</span> }, <span class="dv">10</span>).to(torch::kInt).to(torch::kCPU);</span></code></pre></div>
+<p>Lastly, we use the <code>Tensor::item</code> call to extract the data from the tensor and put it in a vector. We could have just printed the vector itself, but in a more realistic use-case you would want to do something with the output.</p>
+<div class="sourceCode" id="cb19"><pre class="sourceCode cpp"><code class="sourceCode cpp"><span id="cb19-1"><a href="#cb19-1"></a><span class="co">// Extract size of output (of the first and only batch) and preallocate</span></span>
+<span id="cb19-2"><a href="#cb19-2"></a><span class="co">// a vector with that size</span></span>
+<span id="cb19-3"><a href="#cb19-3"></a><span class="kw">auto</span> output_size = output.sizes()[<span class="dv">1</span>];</span>
+<span id="cb19-4"><a href="#cb19-4"></a><span class="kw">auto</span> output_vector = <span class="bu">std::</span>vector&lt;<span class="dt">float</span>&gt;(output_size);</span>
+<span id="cb19-5"><a href="#cb19-5"></a></span>
+<span id="cb19-6"><a href="#cb19-6"></a><span class="co">// Fill result vector with tensor items using `Tensor::item`</span></span>
+<span id="cb19-7"><a href="#cb19-7"></a><span class="cf">for</span> (<span class="dt">int</span> i = <span class="dv">0</span>; i &lt; output_size; i++) {</span>
+<span id="cb19-8"><a href="#cb19-8"></a>  output_vector[i] = output[<span class="dv">0</span>][i].item&lt;<span class="dt">float</span>&gt;();</span>
+<span id="cb19-9"><a href="#cb19-9"></a>}</span></code></pre></div>
+<p>If everything went well, you should see a comma separated list of outputs on your screen!</p>
+<p>Fortunately, the Tensor Creation API is <a href="https://pytorch.org/cppdocs/notes/tensor_creation.html" target="_blank">very well documented on pytorch.org</a>. The documentation is relatively sparse beyond this though. You can find an <a href="https://pytorch.org/cppdocs/api/library_root.html" target="_blank">API overview here</a> and a <a href="https://github.com/pytorch/examples/tree/master/cpp" target="_blank">bunch of great examples in the PyTorch repo here</a>. Getting up and running is quite easy, but we want to do some more complicated stuff as well. <a href="/bringing-your-deep-learning-model-to-production-with-libtorch-part-3-advanced-libtorch" target="_blank">Part 3</a> covers some of the more advanced functionality in <code>libtorch</code> that is hardly documented anywhere!</p>
+</body>
+</html>

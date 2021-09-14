@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="/assets/inter/inter.css">
+  <link rel="stylesheet" href="/assets/new.min.css">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <title>Garry's Blog - Why libtorch?</title>
+  <style>
+    code{white-space: normal;}
+    span.smallcaps{font-variant: small-caps;}
+    span.underline{text-decoration: underline;}
+    div.column{display: inline-block; vertical-align: top; width: 50%;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    ul.task-list{list-style: none;}
+    pre > code.sourceCode { white-space: normal; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; white-space: pre; min-width: 100%; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+      }
+    pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+    div.sourceCode
+      { color: #cccccc; background-color: #303030; }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ffcfaf; } /* Alert */
+    code span.an { color: #7f9f7f; font-weight: bold; } /* Annotation */
+    code span.at { } /* Attribute */
+    code span.bn { color: #dca3a3; } /* BaseN */
+    code span.bu { } /* BuiltIn */
+    code span.cf { color: #f0dfaf; } /* ControlFlow */
+    code span.ch { color: #dca3a3; } /* Char */
+    code span.cn { color: #dca3a3; font-weight: bold; } /* Constant */
+    code span.co { color: #7f9f7f; } /* Comment */
+    code span.cv { color: #7f9f7f; font-weight: bold; } /* CommentVar */
+    code span.do { color: #7f9f7f; } /* Documentation */
+    code span.dt { color: #dfdfbf; } /* DataType */
+    code span.dv { color: #dcdccc; } /* DecVal */
+    code span.er { color: #c3bf9f; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #c0bed1; } /* Float */
+    code span.fu { color: #efef8f; } /* Function */
+    code span.im { } /* Import */
+    code span.in { color: #7f9f7f; font-weight: bold; } /* Information */
+    code span.kw { color: #f0dfaf; } /* Keyword */
+    code span.op { color: #f0efd0; } /* Operator */
+    code span.ot { color: #efef8f; } /* Other */
+    code span.pp { color: #ffcfaf; font-weight: bold; } /* Preprocessor */
+    code span.sc { color: #dca3a3; } /* SpecialChar */
+    code span.ss { color: #cc9393; } /* SpecialString */
+    code span.st { color: #cc9393; } /* String */
+    code span.va { } /* Variable */
+    code span.vs { color: #cc9393; } /* VerbatimString */
+    code span.wa { color: #7f9f7f; font-weight: bold; } /* Warning */
+
+    code span.da { color: #7f9f7f; font-weight: bold; } /* Diff add */
+    code span.dr { color: #dca3a3; } /* Diff remove */
+  </style>
+  <style type="text/css">
+    /* fix mobile horizontal scroll */
+    @media only screen and (max-width: 768px) {
+      html,
+      body {
+        overflow-x: hidden;
+      }
+      body {
+        position: relative
+      }
+    }
+    /* fix mobile font size safari */
+    @media screen and (max-device-width: 720px){
+      body{
+        -webkit-text-size-adjust: none;
+      }
+    }
+    /* extensions */
+    sub {
+      color: #ccc;
+    }
+    ul.large li {
+      margin-bottom: 2rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <a href="/" style="color: white; text-decoration: none;">
+      <h1>Garry's Blog</h1>
+    </a>
+    <sub style="line-height: 0.8;">
+      About machine learning, debugging, Python, C++ and other interesting stuff.<br/>
+      Carefully documenting everything I screwed up for future generations.
+    </sub>
+  </header>
+  <h1 id="bringing-your-deep-learning-model-to-production-with-libtorch---why-libtorch-part-1-of-3">Why libtorch?</h1>
+<sub>Part 1 of 3 - Bringing your Deep Learning Model to Production with libtorch</sub>
+<br/><br/>
+<p><em>This is part 1 of a 3-part series on <code>libtorch</code>. This post covers the rationale for PyTorch and using <code>libtorch</code> in production. <a href="/bringing-your-deep-learning-model-to-production-with-libtorch-part-2-tracing-your-pytorch-model" target="_blank">Part 2</a> covers the basics of getting your model up-and-running in <code>libtorch</code>. <a href="/bringing-your-deep-learning-model-to-production-with-libtorch-part-3-advanced-libtorch" target="_blank">Part 3</a> discusses some more advanced topics.</em></p>
+<h4 id="why-pytorch">Why PyTorch?</h4>
+<p>Since my company switched from TensorFlow to PyTorch, I’ve really come to like it. It is much easier to work with and the API is actually somewhat stable (which is actually a feature these days, looking at you TensorFlow). Sometimes it’s the little things that help make a library awesome. For example, the fact that PyTorch does not produce 2 terminals filled with <code>DeprecatedWarnings</code>, arcane messages about libraries that might or not be present on your system when running the most basic MNIST example. Or the fact that the <a href="https://pypi.org/project/torch/" target="_blank">PyPi package</a> for PyTorch comes shipped with CUDA, whereas you need to install it manually with TensorFlow. The fact that PyTorch uses eager execution by default instead of the execution graph model is a big plus as well. TensorFlow does this too as of version 2.0, but it came too late for us.</p>
+<p>Anyway, I think TensorFlow 2.0 with an integrated high-level API (<code>tf.keras</code>) and eager execution by default is a much better product then TensorFlow 1.x was. But they had to completely change the API for that to happen. I don’t trust them to not do such a thing again, so switching to PyTorch, especially from the perspective of business continuity, seems to make sense.</p>
+<h4 id="deep-learning-in-production">Deep Learning in Production</h4>
+<p>Putting custom deep learning models into production is quite a challenge. There are <a href="https://github.com/EthicalML/awesome-production-machine-learning#model-serving-and-monitoring" target="_blank">a</a> <a href="https://github.com/pytorch/serve" target="_blank">lot</a> <a href="https://oracle.github.io/graphpipe/#/" target="_blank">of</a> <a href="https://github.com/bentoml/BentoML" target="_blank">frameworks</a> <a href="https://www.tensorflow.org/tfx/guide/serving" target="_blank">and</a> <a href="https://hydra.cc" target="_blank">tools</a> for this, but most of those are just HTTP-server wrapper around your model on a distributed platform. This will work for 80% of applications, but it didn’t work for us. We ship custom servers with our software pre-installed. The output of our models is fed into external software - we push the results to those services. A REST API does not really make sense in our use case. Also, because each server is a self-contained system, we do not need any of the distributed stuff.</p>
+<p>There are some other requirements that are important for a production system like the one described above. Our system provides real-time analytics on incoming data, so generally, the system must excel at these points:</p>
+<ul>
+<li><strong>It must be very stable</strong>: Since the systems are placed on-premise, maintenance is time-consuming and expensive. Uptime is counted in years.</li>
+<li><strong>High performance</strong>: The more inputs the system can handle, the less servers we need to place.</li>
+<li><strong>Low latency</strong>: The time between input and output should be as low as possible. External systems act upon our analytics, and every millisecond counts.</li>
+</ul>
+<p>We’ll look into each of these categories and see how we can use <code>libtorch</code>, the C++ API for PyTorch to satisfy the requirements.</p>
+<h4 id="limitations-of-the-pure-python-approach">Limitations of the Pure Python Approach</h4>
+<p>The prototype system we built was completely written in Python. In general, it consisted of three parts:</p>
+<ul>
+<li><strong>Data extraction</strong>: Acquiring data from external sources.</li>
+<li><strong>Preprocessing</strong>: There's some preprocessing happening on the data before it is fed to the model. The work is CPU-bound.</li>
+<li><strong>Inference</strong>: Feeding the deep learning model.</li>
+</ul>
+<p>The data extraction part is I/O and networking bound, preprocessing is mostly CPU-bound and inference is GPU-bound by nature. Because of that, there is a lot to be gained by using a multi-threaded model for this system. That’s exactly what our prototype did. Unfortunately, Pythons threading model is famously limited by the <a href="https://wiki.python.org/moin/GlobalInterpreterLock" target="_blank">Global Interpreter Lock</a>, noticeably limiting throughput and latency.</p>
+<p>The data extraction part was mostly just reading from the network and some I/O elsewhere. Most likely it would not matter if it were done in Python or some other platform. Same for the output phase where data was pushed to the external systems.</p>
+<p>The preprocessing part of the system is comprised of a combination of <code>OpenCV</code>, <code>np</code> and <code>torch</code> operations to reshape, restructure and preprocess the data to a suitable format. It was quite fast, but I was pretty sure it could be made much faster if I had control of memory allocation, copying operations and a more extensive interface to <code>OpenCV</code>.</p>
+<p>I was not so sure if the inference would actually benefit from running in <code>libtorch</code> versus Python PyTorch, but at the very least it could not get any worse.</p>
+<p>The machine learning engine we had built around it was quite a lot of work, and as a starting company, it did not feel great to distribute all of our code inside a machine that we placed at our customers, regardless of the fact that those systems were encrypted and everything. Anyway, moving to a compiled language would improve that situation somewhat, so there’s that.</p>
+<p>Mainly, our Python engine was limited by:</p>
+<ul>
+<li>Non-optimal threading</li>
+<li>Non-optimal preprocessing</li>
+<li>Possibly non-optimal model inference</li>
+</ul>
+<h4 id="going-native">Going Native</h4>
+<p>Note that every percentage increase in performance translates almost directly to cost savings in our scenario since we could fit more processing power in a single server whilst keeping our price the same. So, we had to get something faster. In PyTorch land, if you want to go faster, you go to <code>libtorch</code>. <code>libtorch</code> is a C++ API very similar to PyTorch itself. Both are built on <code>ATen</code> which is C++ Tensor library, which is built on top of CUDA and <code>cudnn</code>, it can also be used on the CPU.</p>
+<p><code>libtorch</code> is built to have a very similar API as PyTorch, and most things you can do in PyTorch can be done in <code>libtorch</code> as well. Everything is native C++ though, so you can expect some speedups here and there. Nice!</p>
+<p>The only drawback of <code>libtorch</code> compared to PyTorch is the somewhat <a href="https://pytorch.org/cppdocs/" target="_blank">limited documentation</a>. There are a lot of undocumented features in <code>libtorch</code> (especially the JIT part, we’ll get to that later) and it is not as popular as PyTorch so expect your StackOverflow queries to yield less results. I was up to the challenge though! I figured out some things along the way and decided to document them here for anyone trying to do similar stuff.</p>
+<p>Anyway, this is the rationale for why we built a Torch Script port of our PyTorch model. I don’t think you should be too eager to do this, there are a limited number of reasons to go native. In many situations, Python will just work fine, and you shouldn’t bother. If it <em>does</em> make sense for your use case, this series will help you get started with <code>libtorch</code> and might help you learn about some pitfalls that took me many hours to figure out.</p>
+<p><a href="/bringing-your-deep-learning-model-to-production-with-libtorch-part-2-tracing-your-pytorch-model" target="_blank">Part 2</a> of this series has some code and will walk you through the process of converting your PyTorch model to a <code>libtorch</code>-model!</p>
+</body>
+</html>

@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="/assets/inter/inter.css">
+  <link rel="stylesheet" href="/assets/new.min.css">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <title>Garry's Blog - Advanced libtorch</title>
+  <style>
+    code{white-space: normal;}
+    span.smallcaps{font-variant: small-caps;}
+    span.underline{text-decoration: underline;}
+    div.column{display: inline-block; vertical-align: top; width: 50%;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    ul.task-list{list-style: none;}
+    pre > code.sourceCode { white-space: normal; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; white-space: pre; min-width: 100%; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+      }
+    pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+    div.sourceCode
+      { color: #cccccc; background-color: #303030; }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ffcfaf; } /* Alert */
+    code span.an { color: #7f9f7f; font-weight: bold; } /* Annotation */
+    code span.at { } /* Attribute */
+    code span.bn { color: #dca3a3; } /* BaseN */
+    code span.bu { } /* BuiltIn */
+    code span.cf { color: #f0dfaf; } /* ControlFlow */
+    code span.ch { color: #dca3a3; } /* Char */
+    code span.cn { color: #dca3a3; font-weight: bold; } /* Constant */
+    code span.co { color: #7f9f7f; } /* Comment */
+    code span.cv { color: #7f9f7f; font-weight: bold; } /* CommentVar */
+    code span.do { color: #7f9f7f; } /* Documentation */
+    code span.dt { color: #dfdfbf; } /* DataType */
+    code span.dv { color: #dcdccc; } /* DecVal */
+    code span.er { color: #c3bf9f; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #c0bed1; } /* Float */
+    code span.fu { color: #efef8f; } /* Function */
+    code span.im { } /* Import */
+    code span.in { color: #7f9f7f; font-weight: bold; } /* Information */
+    code span.kw { color: #f0dfaf; } /* Keyword */
+    code span.op { color: #f0efd0; } /* Operator */
+    code span.ot { color: #efef8f; } /* Other */
+    code span.pp { color: #ffcfaf; font-weight: bold; } /* Preprocessor */
+    code span.sc { color: #dca3a3; } /* SpecialChar */
+    code span.ss { color: #cc9393; } /* SpecialString */
+    code span.st { color: #cc9393; } /* String */
+    code span.va { } /* Variable */
+    code span.vs { color: #cc9393; } /* VerbatimString */
+    code span.wa { color: #7f9f7f; font-weight: bold; } /* Warning */
+
+    code span.da { color: #7f9f7f; font-weight: bold; } /* Diff add */
+    code span.dr { color: #dca3a3; } /* Diff remove */
+  </style>
+  <style type="text/css">
+    /* fix mobile horizontal scroll */
+    @media only screen and (max-width: 768px) {
+      html,
+      body {
+        overflow-x: hidden;
+      }
+      body {
+        position: relative
+      }
+    }
+    /* fix mobile font size safari */
+    @media screen and (max-device-width: 720px){
+      body{
+        -webkit-text-size-adjust: none;
+      }
+    }
+    /* extensions */
+    sub {
+      color: #ccc;
+    }
+    ul.large li {
+      margin-bottom: 2rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <a href="/" style="color: white; text-decoration: none;">
+      <h1>Garry's Blog</h1>
+    </a>
+    <sub style="line-height: 0.8;">
+      About machine learning, debugging, Python, C++ and other interesting stuff.<br/>
+      Carefully documenting everything I screwed up for future generations.
+    </sub>
+  </header>
+  <h1 id="bringing-your-deep-learning-model-to-production-with-libtorch---advanced-libtorch-part-3-of-3">Advanced libtorch</h1>
+<sub>Part 3 of 3 - Bringing your Deep Learning Model to Production with libtorch</sub>
+<br/><br/>
+<p><em>This is part 3 of a 3-part series on <code>libtorch</code>. <a href="/bringing-your-deep-learning-model-to-production-with-libtorch-part-1-why-libtorch" target="_blank">Part 1</a> covers the rationale for PyTorch and using <code>libtorch</code> in production. <a href="/bringing-your-deep-learning-model-to-production-with-libtorch-part-2-tracing-your-pytorch-model" target="_blank">Part 2</a> covers the basics of getting your model up-and-running in <code>libtorch</code>. This part discusses some more advanced topics.</em></p>
+<h4 id="the-abstract-syntax-tree">The Abstract Syntax Tree</h4>
+<p>Before I show you the code, I want to quickly go over how PyTorch converts the model to a C++-usable one. Basically, it parses your Python code, in the same way the interpreter would, and builds an <a href="https://en.wikipedia.org/wiki/Abstract_syntax_tree" target="_blank">Abstract Syntax Tree</a> representation of your code. This is what you see when you do <code>print(traced.code)</code> in Python. ASTs are commonplace in interpreters and source code parsers. In <code>libtorch</code>, the AST is loaded in and used to correctly execute the model when calling <code>model.forward()</code>. But <code>libtorch</code> also provides a bunch of other functions for interacting with the Torch Script model such as <code>attr</code>, <code>set_attr</code> and <code>run_method</code>.</p>
+<p>The same Torch Script based approach is also used for all the other <code>libtorch</code> functionality. Whilst this blog series focuses mostly on using an existing PyTorch model in C++, the <code>libtorch</code> API also allows for creating models, training and inference all from C++. I would say close to 90% of Python functionality is included. <a href="https://krshrimali.github.io/Announcing-PyTorch-CPP-Series/" target="_blank">There’s a great blog series on how to do all this by Kushashwa Ravi Shrimali here.</a></p>
+<p>Lastly, some of you C++ programmer might be worried about the copy semantics of <code>torch::Tensor</code> (I was). Don’t worry though, the memory of those objects is fully managed as if it were wrapped by a <code>shared_ptr</code>. You cannot accidentally copy the tensor except by calling <code>torch::Tensor::clone</code>. Now, internally a lot of things might happen when doing operations on the tensor (especially the more complicated ones like <code>permute</code>, more on that later) including copying around. So if you are worried about performance - and you probably are, why else use C++? - you should grab a <a href="https://github.com/pytorch/pytorch/pull/16580/files" target="_blank">profiler</a> to measure what operations are taking the most time. The whole performance thing is a subject for another post, especially since it is not <code>libtorch</code>-specific. Now it’s time for the code!</p>
+<h4 id="setting-class-attributes">Setting class attributes</h4>
+<p>Let’s start of by modifying some of the class attributes of the PyTorch model from the C++ side. We modify the model so that the initialization function can be changed by setting the <code>init_func</code> attribute on <code>Sequence</code>:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode diff"><code class="sourceCode diff"><span id="cb1-1"><a href="#cb1-1"></a>def __init__(self):</span>
+<span id="cb1-2"><a href="#cb1-2"></a>    super(Sequence, self).__init__()</span>
+<span id="cb1-3"><a href="#cb1-3"></a>    self.lstm1 = nn.LSTMCell(1, 51)</span>
+<span id="cb1-4"><a href="#cb1-4"></a>    self.lstm2 = nn.LSTMCell(51, 51)</span>
+<span id="cb1-5"><a href="#cb1-5"></a>    self.linear = nn.Linear(51, 1)</span>
+<span id="cb1-6"><a href="#cb1-6"></a><span class="da">+</span></span>
+<span id="cb1-7"><a href="#cb1-7"></a><span class="da">+    self.init_func = &#39;zeros&#39;</span></span></code></pre></div>
+<div class="sourceCode" id="cb2"><pre class="sourceCode diff"><code class="sourceCode diff"><span id="cb2-1"><a href="#cb2-1"></a><span class="da">+if self.init_func == &#39;ones&#39;:</span></span>
+<span id="cb2-2"><a href="#cb2-2"></a><span class="da">+    h_t = torch.ones(input.size(0), 51, dtype=torch.float)</span></span>
+<span id="cb2-3"><a href="#cb2-3"></a><span class="da">+    c_t = torch.ones(input.size(0), 51, dtype=torch.float)</span></span>
+<span id="cb2-4"><a href="#cb2-4"></a><span class="da">+    h_t2 = torch.ones(input.size(0), 51, dtype=torch.float)</span></span>
+<span id="cb2-5"><a href="#cb2-5"></a><span class="da">+    c_t2 = torch.ones(input.size(0), 51, dtype=torch.float)</span></span>
+<span id="cb2-6"><a href="#cb2-6"></a><span class="da">+    output = torch.ones((1, 1))</span></span>
+<span id="cb2-7"><a href="#cb2-7"></a><span class="da">+else:</span></span>
+<span id="cb2-8"><a href="#cb2-8"></a>    h_t = torch.zeros(input.size(0), 51, dtype=torch.float)</span>
+<span id="cb2-9"><a href="#cb2-9"></a>    c_t = torch.zeros(input.size(0), 51, dtype=torch.float)</span>
+<span id="cb2-10"><a href="#cb2-10"></a>    h_t2 = torch.zeros(input.size(0), 51, dtype=torch.float)</span>
+<span id="cb2-11"><a href="#cb2-11"></a>    c_t2 = torch.zeros(input.size(0), 51, dtype=torch.float)</span>
+<span id="cb2-12"><a href="#cb2-12"></a>    output = torch.zeros((1, 1))</span></code></pre></div>
+<p>Now we can set it to either <code>zeros</code> (the default) or <code>ones</code> to change how the LSTM state is initialized.</p>
+<p>We also add a line to make sure we produce deterministic results at the top in both Python as well as C++:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode diff"><code class="sourceCode diff"><span id="cb3-1"><a href="#cb3-1"></a>import torch</span>
+<span id="cb3-2"><a href="#cb3-2"></a>from torch import nn</span>
+<span id="cb3-3"><a href="#cb3-3"></a></span>
+<span id="cb3-4"><a href="#cb3-4"></a><span class="da">+torch.manual_seed(0)</span></span></code></pre></div>
+<div class="sourceCode" id="cb4"><pre class="sourceCode diff"><code class="sourceCode diff"><span id="cb4-1"><a href="#cb4-1"></a><span class="da">+torch::manual_seed(0);</span></span>
+<span id="cb4-2"><a href="#cb4-2"></a><span class="da">+</span></span>
+<span id="cb4-3"><a href="#cb4-3"></a>torch::jit::script::Module model;</span></code></pre></div>
+<p>If we run the same C++ code as before a couple of times, we will get the same output each time:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1"></a>$ <span class="ex">./build-and-run.sh</span></span>
+<span id="cb5-2"><a href="#cb5-2"></a><span class="ex">0.102669</span>, 0.103464, 0.105305, 0.106987, 0.108209, 0.109003, 0.109485, 0.109763, 0.109919, 0.110003, 0.110046, 0.110068, 0.110078, 0.110083, 0.110084, 0.110084, 0.110084, 0.110083, 0.110083, 0.110082, 0.109766, 0.109395, 0.109072, 0.108825, 0.10865, 0.108532, 0.108457, 0.108409, 0.10838, 0.108363</span></code></pre></div>
+<p>We can list the model attributes in C++ like so:</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode cpp"><code class="sourceCode cpp"><span id="cb6-1"><a href="#cb6-1"></a><span class="cf">for</span> (<span class="at">const</span> <span class="kw">auto</span>&amp; attr : model.named_attributes())</span>
+<span id="cb6-2"><a href="#cb6-2"></a>  <span class="bu">std::</span>cout &lt;&lt; attr.name &lt;&lt; <span class="bu">std::</span>endl;</span></code></pre></div>
+<p>The list includes the three layers, as well as its sub attributes (nice!) and the <code>init_func</code> attribute we added is also there!</p>
+<p>Now, let’s see if we can switch to using the <code>ones</code> initialization function from C++. We can use <code>attr</code> to read an attribute value and <code>setattr</code> to change it.</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode cpp"><code class="sourceCode cpp"><span id="cb7-1"><a href="#cb7-1"></a><span class="co">// Get current value of `init_func`</span></span>
+<span id="cb7-2"><a href="#cb7-2"></a><span class="kw">auto</span> init_func = model.attr(<span class="st">&quot;init_func&quot;</span>);</span>
+<span id="cb7-3"><a href="#cb7-3"></a></span>
+<span id="cb7-4"><a href="#cb7-4"></a><span class="co">// Set value of `init_func`</span></span>
+<span id="cb7-5"><a href="#cb7-5"></a>model.setattr(<span class="st">&quot;init_func&quot;</span>, <span class="st">&quot;ones&quot;</span>);</span></code></pre></div>
+<p>In <code>main.cpp</code>, we add a line here to change the <code>init_func</code>:</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode diff"><code class="sourceCode diff"><span id="cb8-1"><a href="#cb8-1"></a>model = torch::jit::load(std::string(argv[1]));</span>
+<span id="cb8-2"><a href="#cb8-2"></a></span>
+<span id="cb8-3"><a href="#cb8-3"></a>// Explicitly load model onto CPU, you can use kGPU if you are on Linux</span>
+<span id="cb8-4"><a href="#cb8-4"></a>// and have libtorch version with CUDA support (and a GPU)</span>
+<span id="cb8-5"><a href="#cb8-5"></a>model.to(torch::kCPU);</span>
+<span id="cb8-6"><a href="#cb8-6"></a></span>
+<span id="cb8-7"><a href="#cb8-7"></a>// Set to `eval` model (just like Python)</span>
+<span id="cb8-8"><a href="#cb8-8"></a>model.eval();</span>
+<span id="cb8-9"><a href="#cb8-9"></a></span>
+<span id="cb8-10"><a href="#cb8-10"></a><span class="da">+// Set initialization function to ones</span></span>
+<span id="cb8-11"><a href="#cb8-11"></a><span class="da">+model.setattr(&quot;init_func&quot;, &quot;ones&quot;);</span></span></code></pre></div>
+<p>If you run the program again, you should see output like this:</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1"></a>$ <span class="ex">./build-and-run.sh</span></span>
+<span id="cb9-2"><a href="#cb9-2"></a><span class="ex">-0.373218</span>, -0.187147, -0.0826549, -0.0266808, 0.00465929, 0.0232547, 0.0347184, 0.0419016, 0.0464152, 0.0492396, 0.0509939, 0.0520746, 0.0527348, 0.0531352, 0.0533768, 0.0535219, 0.0536091, 0.0536615, 0.0536932, 0.0537126, 0.0537104, 0.0537147, 0.0537257, 0.0537386, 0.0537503, 0.0537595, 0.0537662, 0.0537708, 0.0537738, 0.0537758</span></code></pre></div>
+<p>Perfect, we got some different output, so this is working! There are some related functions to do similar things that I want to quickly go over:</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode cpp"><code class="sourceCode cpp"><span id="cb10-1"><a href="#cb10-1"></a><span class="co">// Get a list of methods in the model class</span></span>
+<span id="cb10-2"><a href="#cb10-2"></a><span class="cf">for</span> (<span class="at">const</span> <span class="kw">auto</span>&amp; method : model.get_methods())</span>
+<span id="cb10-3"><a href="#cb10-3"></a>  <span class="bu">std::</span>cout &lt;&lt; method.name() &lt;&lt; <span class="st">&quot;</span><span class="sc">\n</span><span class="st">&quot;</span>;</span>
+<span id="cb10-4"><a href="#cb10-4"></a>  </span>
+<span id="cb10-5"><a href="#cb10-5"></a><span class="co">// Run a model class member function with parameters other than `forward`:</span></span>
+<span id="cb10-6"><a href="#cb10-6"></a><span class="co">// (Note that `model.forward` is just a shortcut for `model.run_method(&quot;forward&quot;, ...)`)</span></span>
+<span id="cb10-7"><a href="#cb10-7"></a><span class="kw">auto</span> result = model.run_method(<span class="st">&quot;some_func&quot;</span>, ...);</span>
+<span id="cb10-8"><a href="#cb10-8"></a></span>
+<span id="cb10-9"><a href="#cb10-9"></a><span class="co">// See parameters (similar ot Python API)</span></span>
+<span id="cb10-10"><a href="#cb10-10"></a><span class="bu">std::</span>cout &lt;&lt; model.parameters() &lt;&lt; <span class="bu">std::</span>endl;</span></code></pre></div>
+<p>Some of this stuff is hardly documented, but you can find some information in the <a href="https://pytorch.org/cppdocs/api/structtorch_1_1jit_1_1_module.html#exhale-struct-structtorch-1-1jit-1-1-module" target="_blank">class reference documentation of <code>torch::Module</code></a>.</p>
+<h4 id="converting-between-raw-data-and-tensor-and-back">Converting between raw data and Tensor and back</h4>
+<p>At some point, you will have to convert between raw data (for example: images) and a proper <code>torch::Tensor</code> and back. To do this, you can create an empty Tensor, acquire a pointer to the Tensor contents, and then copy over the data. You have to make sure that the data is in the right format to avoid any memory issues.</p>
+<p>For example, let’s look at some code to convert an OpenCV matrix image ( <code>cv::Mat</code>) to Torch. First, we need to make sure that the raw memory inside the <code>cv::Mat</code> <a href="https://stackoverflow.com/questions/33665241/is-opencv-matrix-data-guaranteed-to-be-continuous" target="_blank">is continuous</a>. Sometimes, instead of applying an actual operation on the data, OpenCV will simply set some internal attributes to change the way the data is read instead of copying to preserve performance. (I believe this in only done when extracting submatrices, but I am not sure.) Copying raw data from such a non-continuous <code>cv::Mat</code> would cause the resulting Tensor to be messed up. Use <code>cv::Mat::clone</code> to make sure it is continuous:</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode cpp"><code class="sourceCode cpp"><span id="cb11-1"><a href="#cb11-1"></a><span class="cf">if</span> (!mat.isContinuous()) {</span>
+<span id="cb11-2"><a href="#cb11-2"></a>  mat = mat.clone();</span>
+<span id="cb11-3"><a href="#cb11-3"></a>}</span></code></pre></div>
+<p>Now we can pre-allocate an empty tensor with the same dimensions as the <code>cv::Mat</code> and copy the raw memory into it!</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode cpp"><code class="sourceCode cpp"><span id="cb12-1"><a href="#cb12-1"></a><span class="co">// (We use torch::empty here since it can be somewhat faster than `zeros`</span></span>
+<span id="cb12-2"><a href="#cb12-2"></a><span class="co">//  or `ones` since it is allowed to fill the tensor with garbage.)</span></span>
+<span id="cb12-3"><a href="#cb12-3"></a><span class="kw">auto</span> tensor = torch::empty(</span>
+<span id="cb12-4"><a href="#cb12-4"></a>  { mat.rows, mat.cols, mat.channels() },</span>
+<span id="cb12-5"><a href="#cb12-5"></a>  <span class="co">// Set dtype=byte and place on CPU, you can change these to whatever</span></span>
+<span id="cb12-6"><a href="#cb12-6"></a>  <span class="co">// suits your use-case.</span></span>
+<span id="cb12-7"><a href="#cb12-7"></a>  torch::TensorOptions()</span>
+<span id="cb12-8"><a href="#cb12-8"></a>    .dtype(torch::kByte)</span>
+<span id="cb12-9"><a href="#cb12-9"></a>    .device(torch::kCPU));</span>
+<span id="cb12-10"><a href="#cb12-10"></a>    </span>
+<span id="cb12-11"><a href="#cb12-11"></a><span class="co">// Copy over the data</span></span>
+<span id="cb12-12"><a href="#cb12-12"></a><span class="bu">std::</span>memcpy(tensor.data_ptr(), <span class="kw">reinterpret_cast</span>&lt;<span class="dt">void</span>*&gt;(mat.data), tensor.numel() * <span class="kw">sizeof</span>(at::kByte));</span></code></pre></div>
+<p>We get a reference to the tensor internal memory through <code>tensor.data_ptr()</code>. The <code>cv::Mat</code> data is in <code>mat.data</code>. To calculate the size of the tensor, we multiply the total number of elements with the size of each element with <code>tensor.numel() * sizeof(at::kByte)</code>. Make sure that you use the same type here as you did in the tensor options before!</p>
+<p>The above code creates an empty tensor in <a href="https://aidevelopmenthub.com/a-gentle-introduction-to-channels-first-and-channels-last-image-formats-for-deep-learning/" target="_blank">channels-last</a> format of the original image. Because most PyTorch models accept channels-first format, we need to convert it. The <code>torch::Tensor::permute</code> function is perfect for this:</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode cpp"><code class="sourceCode cpp"><span id="cb13-1"><a href="#cb13-1"></a><span class="co">// You should read this as &quot;permute the tensor in such a way that the dimensions of the new tensor are:</span></span>
+<span id="cb13-2"><a href="#cb13-2"></a><span class="co">//  - First dimension: third dimension of old tensor</span></span>
+<span id="cb13-3"><a href="#cb13-3"></a><span class="co">//  - Second dimension: first dimension of old tensor</span></span>
+<span id="cb13-4"><a href="#cb13-4"></a><span class="co">//  - Third dimension: second dimension of old tensor</span></span>
+<span id="cb13-5"><a href="#cb13-5"></a><span class="kw">auto</span> tensor_cf = tensor.permute({ <span class="dv">2</span>, <span class="dv">0</span>, <span class="dv">1</span> });</span></code></pre></div>
+<p>This would convert a tensor of shape <code>(300, 200, 3)</code> to <code>(3, 300, 200)</code>.</p>
+<p>Now, the conversion back to <code>cv::Mat</code> (or whatever other data structure you might use) is quite straightforward, I’ll leave it as an excersise for the reader. There is just one important thing to note: Just like OpenCV, torch also uses strided memory in some places and the memory layout is not guaranteed to be continuous! For example, the <code>torch::Tensor::permute</code> method above is really fast because it does not actually permute the inner data, it just applies some memory tricks so that subsequent interaction will read the tensor <em>as if</em> the memory was permuted. Therefore, use the <code>torch::Tensor::contiguous</code> method to rearrange the memory correctly:</p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode cpp"><code class="sourceCode cpp"><span id="cb14-1"><a href="#cb14-1"></a><span class="co">// Do this before using the raw data somewhere else!</span></span>
+<span id="cb14-2"><a href="#cb14-2"></a><span class="kw">auto</span> tensor_raw_data_ptr = tensor.contiguous().data_ptr();</span></code></pre></div>
+<p>I can tell you from first-hand experience that this little piece of advice might save you a couple of hours debugging :)</p>
+<h4 id="other-tidbits-that-might-come-in-handy">Other tidbits that might come in handy</h4>
+<p>This section is just an information-dense collection of general tips and tricks; hopefully they will save you some time if you run into similar problems.</p>
+<ol type="1">
+<li>To check whether a GPU is available, you can use the following code, which is very similar to the Python version:</li>
+</ol>
+<div class="sourceCode" id="cb15"><pre class="sourceCode cpp"><code class="sourceCode cpp"><span id="cb15-1"><a href="#cb15-1"></a><span class="kw">auto</span> device = torch::cuda::is_available()</span>
+<span id="cb15-2"><a href="#cb15-2"></a>  ? torch::kCUDA</span>
+<span id="cb15-3"><a href="#cb15-3"></a>  : torch::kCPU;</span>
+<span id="cb15-4"><a href="#cb15-4"></a></span>
+<span id="cb15-5"><a href="#cb15-5"></a><span class="co">// You can use `.to(device)` from here on modules and</span></span>
+<span id="cb15-6"><a href="#cb15-6"></a><span class="co">// Tensors to make sure they are loaded in the correct</span></span>
+<span id="cb15-7"><a href="#cb15-7"></a><span class="co">// memory location!</span></span></code></pre></div>
+<ol start="2" type="1">
+<li>You can convert between Python and C++ tuples by using the <code>torch::Tensor::toTuple()</code> function as such:</li>
+</ol>
+<div class="sourceCode" id="cb16"><pre class="sourceCode cpp"><code class="sourceCode cpp"><span id="cb16-1"><a href="#cb16-1"></a><span class="at">const</span> <span class="kw">auto</span>&amp; tuple_elements = <span class="kw">module</span>.attr(<span class="st">&quot;my_attribute&quot;</span>).toTuple()-&gt;elements();</span></code></pre></div>
+<ol start="3" type="1">
+<li><code>libtorch</code> throws exceptions of type <code>c10::Error</code>, you can catch them like this:</li>
+</ol>
+<div class="sourceCode" id="cb17"><pre class="sourceCode cpp"><code class="sourceCode cpp"><span id="cb17-1"><a href="#cb17-1"></a><span class="cf">try</span> {</span>
+<span id="cb17-2"><a href="#cb17-2"></a>  <span class="va">module_</span> = torch::jit::load(<span class="va">filename</span>);</span>
+<span id="cb17-3"><a href="#cb17-3"></a>  <span class="va">module_</span>.eval();</span>
+<span id="cb17-4"><a href="#cb17-4"></a>}</span>
+<span id="cb17-5"><a href="#cb17-5"></a><span class="cf">catch</span> (<span class="at">const</span> c10::Error&amp; e) {</span>
+<span id="cb17-6"><a href="#cb17-6"></a>  <span class="cf">throw</span> <span class="bu">std::</span>invalid_argument(<span class="st">&quot;Failed to load model: &quot;</span> + e.msg());</span>
+<span id="cb17-7"><a href="#cb17-7"></a>}</span></code></pre></div>
+<ol start="4" type="1">
+<li>Native calls in <code>libtorch</code> are often asynchronous. If you are profiling a traced model you might run into weird timings like this:</li>
+</ol>
+<div class="sourceCode" id="cb18"><pre class="sourceCode cpp"><code class="sourceCode cpp"><span id="cb18-1"><a href="#cb18-1"></a><span class="co">// This call takes 200 milliseconds.</span></span>
+<span id="cb18-2"><a href="#cb18-2"></a><span class="kw">auto</span> y = <span class="kw">module</span>.forward(x).toTensor();</span>
+<span id="cb18-3"><a href="#cb18-3"></a><span class="co">// This call takes 300 milliseconds (???).</span></span>
+<span id="cb18-4"><a href="#cb18-4"></a><span class="kw">auto</span> y_activation = torch::softmax(y, <span class="dv">0</span>).to(torch::kCPU);</span></code></pre></div>
+<p>How could a simple <code>softmax</code> invocation be more time-consuming than the entire model inference iteration? Well, it’s not. But because of the async nature of <code>libtorch</code>, inference is still running after <code>module.forward()</code>. Only once <code>to(torch::kCPU)</code> is called does it block, since the output of the previous call must be available for the data to be copied over to the CPU.</p>
+<p>You can use <code>cudaDeviceSynchronize()</code> (located in the CUDA header file <code>cuda.h</code>) to block at any point in your code.</p>
+<div class="sourceCode" id="cb19"><pre class="sourceCode cpp"><code class="sourceCode cpp"><span id="cb19-1"><a href="#cb19-1"></a><span class="co">// This call takes 200 milliseconds.</span></span>
+<span id="cb19-2"><a href="#cb19-2"></a><span class="kw">auto</span> y = <span class="kw">module</span>.forward(x).toTensor();</span>
+<span id="cb19-3"><a href="#cb19-3"></a></span>
+<span id="cb19-4"><a href="#cb19-4"></a><span class="co">// This call takes 300 milliseconds.</span></span>
+<span id="cb19-5"><a href="#cb19-5"></a>cudaDeviceSynchronize();</span>
+<span id="cb19-6"><a href="#cb19-6"></a></span>
+<span id="cb19-7"><a href="#cb19-7"></a><span class="co">// This call now takes just a few msecs.</span></span>
+<span id="cb19-8"><a href="#cb19-8"></a><span class="kw">auto</span> y_activation = torch::softmax(y, <span class="dv">0</span>).to(torch::kCPU);</span></code></pre></div>
+<ol start="5" type="1">
+<li>To turn off <code>cudnn</code> benchmarking, use the following code (which is a little different from the Python version):</li>
+</ol>
+<div class="sourceCode" id="cb20"><pre class="sourceCode cpp"><code class="sourceCode cpp"><span id="cb20-1"><a href="#cb20-1"></a>at::globalContext().setBenchmarkCuDNN(<span class="kw">false</span>);</span></code></pre></div>
+<ol start="6" type="1">
+<li>Lastly, keep in mind that the JIT compiler will do a lot of caching on the first inference run to improve performance later on. For me, the first run takes over 45 seconds. Subsequent runs take 250 milliseconds. I was a little worried when running my model in <code>libtorch</code> the first time, but this is normal!</li>
+</ol>
+<h4 id="conclusions">Conclusions</h4>
+<p>The PyTorch team did a great job building a native counterpart of their library that is as powerful as the Python version! There are a few gotchas here and there which I tried to document as much as possible throughout this blog series. My own project with <code>libtorch</code> has resulted in significant speedup as well as more stability and a more predictable memory-footprint. As I said in the beginning, using the C++ library is not necessary for most use cases, but it’s a nice to have in case you are one of the few people who do.</p>
+<p>Thanks for reading!</p>
+</body>
+</html>
